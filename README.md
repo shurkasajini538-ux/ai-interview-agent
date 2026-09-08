@@ -7,7 +7,6 @@
 ```bash
 pip install -r requirements.txt
 python demo.py
-# 有界面版（录屏更好看）
 streamlit run app.py
 ```
 
