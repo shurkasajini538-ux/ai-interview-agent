@@ -3,7 +3,7 @@
 ## 一句话
 读取简历 → 自动出题 → 追问 → 打分 → 给优化版，帮本科生准备求职/保研面试。
 
-## 快速跑（离线也能跑，初赛录屏就用这个）
+## 快速跑
 ```bash
 pip install -r requirements.txt
 python demo.py
@@ -17,7 +17,7 @@ streamlit run app.py
 - Memory：`src/memory.py` 记薄弱点（缺少量化结果/技术细节不清），存在 `output/memory.json`
 - 7个硬指标：跑 `python demo.py` 一次全展示，结果存 `output/demo_result.txt`
 
-## 普通大模型 vs openJiuwen Agent（答辩必说）
+## 普通大模型 vs openJiuwen Agent
 | | 普通大模型 | openJiuwen Agent |
 |---|---|---|
 | 记忆 | 单轮，问完就忘 | Knowledge+RAG记住简历，Memory记住薄弱点 |
