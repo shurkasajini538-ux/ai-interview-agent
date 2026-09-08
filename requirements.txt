@@ -1,0 +1,6 @@
+# AI 面试陪练 Agent（基于 openJiuwen）
+openjiuwen>=0.1.17
+streamlit
+python-dotenv
+# 可选：如需接在线大模型，任选其一
+# openai

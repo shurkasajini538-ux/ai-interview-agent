@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+output/memory.json
+output/_tmp_resume.md
+.env
+.venv/
