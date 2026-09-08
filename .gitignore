@@ -4,3 +4,5 @@ output/memory.json
 output/_tmp_resume.md
 .env
 .venv/
+# Word 临时锁定文件
+~$*
