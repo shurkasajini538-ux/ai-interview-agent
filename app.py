@@ -5,6 +5,7 @@ import http.cookies
 import json
 import logging
 import mimetypes
+import time
 import re
 import threading
 import urllib.parse
@@ -16,6 +17,9 @@ from studio.interview import evaluate, followup, generate_questions, report_mark
 from studio.models import ModelError, ModelSettings, call_json
 from studio.resumes import clean_text, extract_document, parse_resume
 from studio.storage import Store, identifier, now, summarize
+from studio.jobs import Jobs
+from studio.knowledge import EvidenceIndex
+from studio import runtime
 
 ROOT = Path(__file__).resolve().parent
 LOGGER = logging.getLogger('studio')
@@ -27,6 +31,7 @@ class Studio:
         self.store = Store(self.root / 'data' / 'studio.sqlite3')
         self.settings = ModelSettings(self.root)
         self.locks, self.locks_guard = {}, threading.Lock()
+        self.jobs=Jobs()
 
     def item_lock(self, key):
         with self.locks_guard:
@@ -78,7 +83,9 @@ class Studio:
             title = parsed['name'] + '的简历'
         value = {'id': identifier(), 'title': title, 'filename': filename, 'text': text,
                  'parsed': parsed, 'warnings': warnings, 'created_at': now(), 'updated_at': now()}
-        return self.store.put('resumes', value, owner)
+        runtime.emit('stage',label='正在建立简历证据索引')
+        EvidenceIndex(text,self.root/'data'/'evidence.sqlite3')
+        return runtime.commit(lambda:self.store.put('resumes',value,owner))
 
     def new_session(self, owner, payload):
         resume = self.store.get('resumes', payload.get('resume_id', ''), owner)
@@ -92,13 +99,15 @@ class Studio:
         difficulty = str(payload.get('difficulty', '标准'))[:30]
         config = self.settings.snapshot()
         memory = self.store.weak_points(owner)
+        config['_memory']=memory
         questions, engine, warning = generate_questions(resume, role, jd, count, difficulty, memory, config)
         session = {'id': identifier(), 'resume_id': resume['id'], 'resume_name': resume['title'],
                    'resume_snapshot': resume, 'role': role, 'job_description': jd, 'difficulty': difficulty,
                    'questions': questions, 'current_index': 0, 'status': 'active', 'engine': engine,
                    'model': config['model'] if engine == 'online' else '', 'notice': warning,
-                   'memory_used': memory, 'created_at': now(), 'updated_at': now()}
-        return self.store.put('sessions', session, owner)
+                   'memory_used': memory, 'created_at': now(), 'updated_at': now(),
+                   'usage_history':[runtime.metrics()]}
+        return runtime.commit(lambda:self.store.put('sessions',session,owner))
 
     def mutate_session(self, owner, session_id, action, payload):
         lock = self.item_lock(session_id)
@@ -127,6 +136,8 @@ class Studio:
                 if answer:
                     question['answers'].append({'text': answer, 'kind': question['stage'], 'time': now()})
                 config = self.settings.snapshot()
+                config['_memory']=self.store.weak_points(owner)
+                runtime.emit('stage',label='正在核对回答与简历依据')
                 if question['stage'] == 'initial' and not direct:
                     fq, engine, warning = followup(session['resume_snapshot'], question, answer, config)
                     question.update(stage='followup', followup=fq, followup_engine=engine, notice=warning)
@@ -156,7 +167,9 @@ class Studio:
                 question.update(stage='initial', answers=[], followup='', result=None)
             else:
                 raise ValueError('不支持的操作。')
-            return self.store.put_with_request(session, owner, session_id + ':' + request_id if request_id else '')
+            session.setdefault('usage_history',[]).append(runtime.metrics())
+            runtime.emit('stage',label='正在保存练习结果')
+            return runtime.commit(lambda:self.store.put_with_request(session,owner,session_id+':'+request_id if request_id else ''))
         finally:
             lock.release()
 
@@ -210,16 +223,53 @@ def handler_factory(studio):
             try:
                 if path in ('/', '/index.html'):
                     extra = {} if owner else {'Set-Cookie': f'studio_owner={identifier()}; HttpOnly; SameSite=Strict; Path=/; Max-Age=31536000'}
-                    return self.send((studio.root / 'web' / 'index.html').read_bytes(), content_type='text/html; charset=utf-8', extra=extra)
+                    dist=studio.root/'frontend'/'dist'/'index.html'
+                    return self.send((dist if dist.exists() else studio.root/'web'/'index.html').read_bytes(),content_type='text/html; charset=utf-8',extra=extra)
+                if path.startswith('/assets/') and (studio.root/'frontend'/'dist').exists():
+                    dist=(studio.root/'frontend'/'dist').resolve()
+                    file=(dist/path.lstrip('/')).resolve()
+                    if not file.is_relative_to(dist) or not file.is_file():
+                        return self.send({'error':'资源不存在。'},404)
+                    return self.send(file.read_bytes(),content_type=mimetypes.guess_type(file)[0] or 'application/octet-stream')
                 if path in ('/assets/app.js', '/assets/style.css', '/assets/icon.svg'):
                     file = studio.root / 'web' / path.rsplit('/', 1)[-1]
                     return self.send(file.read_bytes(), content_type=mimetypes.guess_type(file)[0] or 'application/octet-stream')
                 if path == '/api/health':
-                    return self.send({'ok': True, 'version': '1.0.0', 'app': 'interview-studio'})
+                    return self.send({'ok': True, 'version': '2.0.0', 'app': 'interview-studio'})
                 if not owner:
                     return self.send({'error': '请从首页打开应用。'}, 401)
                 if path == '/api/bootstrap':
                     return self.send(studio.bootstrap(owner))
+                job_match=re.fullmatch(r'/api/jobs/([a-f0-9]{32})(/events)?',path)
+                if job_match:
+                    job_id,events=job_match.groups()
+                    job=studio.jobs.get(job_id,owner)
+                    if not events:
+                        return self.send(studio.jobs.public(job))
+                    last_id=int(self.headers.get('Last-Event-ID','0'))
+                    self.send_response(200)
+                    self.send_header('Content-Type','text/event-stream; charset=utf-8')
+                    self.send_header('Cache-Control','no-store')
+                    self.send_header('X-Accel-Buffering','no')
+                    self.end_headers()
+                    try:
+                        while True:
+                            snapshot=studio.jobs.public(job)
+                            fresh=[e for e in snapshot['events'] if e['sequence']>last_id]
+                            for event in fresh:
+                                self.wfile.write(f'id: {event["sequence"]}\ndata: {json.dumps(event,ensure_ascii=False)}\n\n'.encode())
+                                last_id=event['sequence']
+                            if snapshot['state'] in ('done','failed','cancelled'):
+                                self.wfile.write(('event: final\ndata: '+json.dumps(snapshot,ensure_ascii=False)+'\n\n').encode())
+                                self.wfile.flush()
+                                break
+                            if not fresh:
+                                self.wfile.write(b': heartbeat\n\n')
+                            self.wfile.flush()
+                            time.sleep(.25)
+                    except (BrokenPipeError,ConnectionResetError,ConnectionAbortedError):
+                        pass
+                    return
                 if path == '/api/sample':
                     return self.send({'text': (studio.root / 'samples' / '示例简历.md').read_text(encoding='utf-8')})
                 match = re.fullmatch(r'/api/(resumes|sessions)/([a-f0-9]{32})(/export)?', path)
@@ -259,6 +309,25 @@ def handler_factory(studio):
                 if not isinstance(payload, dict):
                     raise ValueError('请求格式不正确。')
                 path = urllib.parse.urlparse(self.path).path
+                if path=='/api/jobs':
+                    kind=payload.get('kind')
+                    data=payload.get('payload',{})
+                    request_id=str(payload.get('request_id',''))[:100]
+                    if not request_id or not isinstance(data,dict):
+                        raise ValueError('异步操作需要有效的请求编号和参数。')
+                    if kind=='session':
+                        callback=lambda:studio.new_session(owner,data)
+                    elif kind=='import':
+                        callback=lambda:studio.import_resume(owner,data)
+                    elif kind in ('answer','next','retry','skip'):
+                        session_id=str(payload.get('session_id',''))
+                        callback=lambda:studio.mutate_session(owner,session_id,kind,{**data,'request_id':request_id})
+                    else:
+                        raise ValueError('不支持的异步操作。')
+                    return self.send(studio.jobs.create(owner,request_id,payload,callback),202)
+                cancel_match=re.fullmatch(r'/api/jobs/([a-f0-9]{32})/cancel',path)
+                if cancel_match:
+                    return self.send(studio.jobs.cancel(cancel_match.group(1),owner))
                 if path == '/api/resumes':
                     return self.send(studio.import_resume(owner, payload))
                 if path == '/api/sessions':
@@ -287,6 +356,7 @@ def handler_factory(studio):
                         r['text'] = clean_text(str(payload.get('text', '')))
                         r['title'] = str(payload.get('title', r['title'])).strip()[:100] or r['title']
                         r['parsed'] = parse_resume(r['text'])
+                        EvidenceIndex(r['text'],studio.root/'data'/'evidence.sqlite3')
                         return self.send(studio.store.put('resumes', r, owner))
                     if table == 'sessions':
                         return self.send(studio.mutate_session(owner, item_id, action, payload))

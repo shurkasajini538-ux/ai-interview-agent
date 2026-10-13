@@ -3,17 +3,32 @@ import re
 from .models import ModelError, call_json
 from .resumes import redact_contacts, retrieve
 from .storage import identifier, now
+from .knowledge import EvidenceIndex
+from .agent import run_coach
+from . import runtime
 
 DIMENSIONS = [('structure', '回答完整性'), ('depth', '内容深度'),
               ('expression', '表达组织'), ('evidence', '事实与证据')]
 
 
 def model_context(config, resume, **extra):
-    text = resume['text']
+    query=' '.join(str(extra.get(k,'')) for k in ('role','job_description','question','answer'))[:4000]
+    records=EvidenceIndex(resume['text'],config.get('_index_path')).search(query or '项目 技能 个人贡献',3)
+    runtime.emit('stage',label='已检索简历证据')
+    summary={k:resume['parsed'].get(k) for k in ('education','skills','projects')}
+    summary['projects']=[{'title':p['title']} for p in resume['parsed'].get('projects',[])]
     if config.get('redact_contacts', True):
-        text = redact_contacts(text)
         extra = {k: redact_contacts(v) if isinstance(v, str) else v for k, v in extra.items()}
-    return {'resume': text[:18000], **extra}
+        records=[r | {'text':redact_contacts(r['text'])} for r in records]
+    return {'resume_summary':summary,'resume_evidence':records,**extra,
+            '_coach_context':{'resume':resume,'memory':extra.get('previous_weak_points',config.get('_memory',[]))}}
+
+
+def request_json(config,task,payload,max_tokens=2200):
+    context=payload.pop('_coach_context',None)
+    if config.get('agent_enabled') and context:
+        return run_coach(config,task,payload,context,max_tokens)
+    return call_json(config,task,payload,max_tokens)
 
 
 def notice(config, error=None):
@@ -76,7 +91,7 @@ def generate_questions(resume, role, jd, count, difficulty, memory, config):
             '"objective":"考察要点","source":"简历中的逐字摘录"}]}。'
             'source 必须是简历的连续原文。不要生成报告标题，不要给出答案。')
     try:
-        response = call_json(config, task, model_context(config, resume, role=role, job_description=jd,
+        response = request_json(config, task, model_context(config, resume, role=role, job_description=jd,
                               count=count, difficulty=difficulty, previous_weak_points=memory), max_tokens=3200)
         items = response.get('questions')
         if not isinstance(items, list) or len(items) != count:
@@ -90,7 +105,9 @@ def generate_questions(resume, role, jd, count, difficulty, memory, config):
             if not source or source not in resume['text']:
                 source = retrieve(resume['text'], q['text'], 1)[0]
             result.append(fallback[i] | {'category': str(q.get('category', '综合'))[:20],
-                          'text': q['text'], 'objective': str(q.get('objective', ''))[:250], 'source': source})
+                          'text': q['text'], 'objective': str(q.get('objective', ''))[:250], 'source': source,
+                          'evidence':EvidenceIndex(resume['text'],config.get('_index_path')).search(q['text'],2),
+                          'coach':response.get('_coach',{})})
         return result, 'online', ''
     except ModelError as e:
         return fallback, 'local_fallback', notice(config, e)
@@ -99,13 +116,14 @@ def generate_questions(resume, role, jd, count, difficulty, memory, config):
 def followup(resume, question, answer, config):
     if config['mode'] == 'online':
         try:
-            result = call_json(config, '针对学生当前回答，只提出一道最有价值的追问。'
+            result = request_json(config, '针对学生当前回答，只提出一道最有价值的追问。'
                                '不要替学生回答，不要虚构。返回 {"followup":"追问", "focus":"追问关注点"}。',
                                model_context(config, resume, question=question['text'], answer=answer,
                                              evidence='\n'.join(retrieve(resume['text'], answer + question['text']))), 600)
             fq = result.get('followup', '')
             if not isinstance(fq, str) or not 8 <= len(fq) <= 900:
                 raise ModelError('追问格式不符合要求')
+            question['followup_coach']=result.get('_coach',{})
             return fq, 'online', ''
         except ModelError as e:
             warning = notice(config, e)
@@ -204,7 +222,7 @@ def evaluate(resume, question, config):
             '"suggestions":["建议"],"star":{"s":["回答原文摘录"],"t":[],"a":[],"r":[]}}。'
             '四个 key 每项出现一次。star 只允许重新组织回答的连续原文摘录，缺少信息用空数组，禁止写新事实。')
     try:
-        output = call_json(config, task, model_context(config, resume, question=question['text'],
+        output = request_json(config, task, model_context(config, resume, question=question['text'],
                            followup=question['followup'], answer=answer,
                            relevant_resume_evidence='\n'.join(retrieve(resume['text'], question['text'] + answer))), 2600)
         dims = output.get('dimensions')
@@ -231,6 +249,7 @@ def evaluate(resume, question, config):
         return {'dimensions': dimensions, 'total': sum(d['score'] for d in dimensions), 'engine': 'online',
                 'suggestions': [str(s)[:700] for s in suggestions[:5]], 'optimized': optimized,
                 'missing_facts': missing, 'evaluated_at': now(),
+                'coach':output.get('_coach',{}),'metrics':runtime.metrics(),
                 'notice': 'AI 辅助评价，供练习参考。STAR 整理仅使用你的回答原文，缺失事实保留待补充标记。'}
     except ModelError as e:
         fallback.update(engine='local_fallback', notice=notice(config, e) + ' ' + fallback['notice'])
