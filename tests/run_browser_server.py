@@ -1,0 +1,21 @@
+"""Serve an isolated temporary workspace for browser acceptance tests."""
+import shutil
+import sys
+import tempfile
+from pathlib import Path
+from http.server import ThreadingHTTPServer
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from app import Studio, handler_factory
+
+root = Path(__file__).resolve().parents[1]
+with tempfile.TemporaryDirectory(prefix='interview-browser-test-') as temporary:
+    directory = Path(temporary)
+    shutil.copytree(root/'web', directory/'web')
+    shutil.copytree(root/'samples', directory/'samples')
+    server = ThreadingHTTPServer(('127.0.0.1', 8766), handler_factory(Studio(directory)))
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        pass
+    finally:
+        server.server_close()
