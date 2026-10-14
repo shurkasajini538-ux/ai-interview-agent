@@ -1,0 +1,330 @@
+{
+  "dataset": "self-authored synthetic resume, 6 project passages / 12 queries",
+  "limitations": "Small synthetic retrieval benchmark only. Not a human study or proof of better coaching outcomes. TF-IDF vectors are not neural semantic embeddings.",
+  "results": [
+    {
+      "strategy": "legacy-character",
+      "cases": 12,
+      "hit_at_1": 1.0,
+      "hit_at_3": 1.0,
+      "total_ms": 5.84,
+      "details": [
+        {
+          "query": "MySQL 重复报名",
+          "expected_marker": "并发报名唯一约束方案",
+          "hit_at_1": true,
+          "hit_at_3": true
+        },
+        {
+          "query": "MySQL 重复报名 请说明个人贡献和验证方法",
+          "expected_marker": "并发报名唯一约束方案",
+          "hit_at_1": true,
+          "hit_at_3": true
+        },
+        {
+          "query": "Redis 缓存过期",
+          "expected_marker": "热点数据过期策略",
+          "hit_at_1": true,
+          "hit_at_3": true
+        },
+        {
+          "query": "Redis 缓存过期 请说明个人贡献和验证方法",
+          "expected_marker": "热点数据过期策略",
+          "hit_at_1": true,
+          "hit_at_3": true
+        },
+        {
+          "query": "Python 采集日志",
+          "expected_marker": "故障日志采集流程",
+          "hit_at_1": true,
+          "hit_at_3": true
+        },
+        {
+          "query": "Python 采集日志 请说明个人贡献和验证方法",
+          "expected_marker": "故障日志采集流程",
+          "hit_at_1": true,
+          "hit_at_3": true
+        },
+        {
+          "query": "Flask 参数校验",
+          "expected_marker": "注册接口校验清单",
+          "hit_at_1": true,
+          "hit_at_3": true
+        },
+        {
+          "query": "Flask 参数校验 请说明个人贡献和验证方法",
+          "expected_marker": "注册接口校验清单",
+          "hit_at_1": true,
+          "hit_at_3": true
+        },
+        {
+          "query": "React 列表渲染",
+          "expected_marker": "列表键值复用检查",
+          "hit_at_1": true,
+          "hit_at_3": true
+        },
+        {
+          "query": "React 列表渲染 请说明个人贡献和验证方法",
+          "expected_marker": "列表键值复用检查",
+          "hit_at_1": true,
+          "hit_at_3": true
+        },
+        {
+          "query": "Git 冲突协作",
+          "expected_marker": "分支冲突沟通记录",
+          "hit_at_1": true,
+          "hit_at_3": true
+        },
+        {
+          "query": "Git 冲突协作 请说明个人贡献和验证方法",
+          "expected_marker": "分支冲突沟通记录",
+          "hit_at_1": true,
+          "hit_at_3": true
+        }
+      ]
+    },
+    {
+      "strategy": "keyword",
+      "cases": 12,
+      "hit_at_1": 1.0,
+      "hit_at_3": 1.0,
+      "total_ms": 6.15,
+      "details": [
+        {
+          "query": "MySQL 重复报名",
+          "expected_marker": "并发报名唯一约束方案",
+          "hit_at_1": true,
+          "hit_at_3": true
+        },
+        {
+          "query": "MySQL 重复报名 请说明个人贡献和验证方法",
+          "expected_marker": "并发报名唯一约束方案",
+          "hit_at_1": true,
+          "hit_at_3": true
+        },
+        {
+          "query": "Redis 缓存过期",
+          "expected_marker": "热点数据过期策略",
+          "hit_at_1": true,
+          "hit_at_3": true
+        },
+        {
+          "query": "Redis 缓存过期 请说明个人贡献和验证方法",
+          "expected_marker": "热点数据过期策略",
+          "hit_at_1": true,
+          "hit_at_3": true
+        },
+        {
+          "query": "Python 采集日志",
+          "expected_marker": "故障日志采集流程",
+          "hit_at_1": true,
+          "hit_at_3": true
+        },
+        {
+          "query": "Python 采集日志 请说明个人贡献和验证方法",
+          "expected_marker": "故障日志采集流程",
+          "hit_at_1": true,
+          "hit_at_3": true
+        },
+        {
+          "query": "Flask 参数校验",
+          "expected_marker": "注册接口校验清单",
+          "hit_at_1": true,
+          "hit_at_3": true
+        },
+        {
+          "query": "Flask 参数校验 请说明个人贡献和验证方法",
+          "expected_marker": "注册接口校验清单",
+          "hit_at_1": true,
+          "hit_at_3": true
+        },
+        {
+          "query": "React 列表渲染",
+          "expected_marker": "列表键值复用检查",
+          "hit_at_1": true,
+          "hit_at_3": true
+        },
+        {
+          "query": "React 列表渲染 请说明个人贡献和验证方法",
+          "expected_marker": "列表键值复用检查",
+          "hit_at_1": true,
+          "hit_at_3": true
+        },
+        {
+          "query": "Git 冲突协作",
+          "expected_marker": "分支冲突沟通记录",
+          "hit_at_1": true,
+          "hit_at_3": true
+        },
+        {
+          "query": "Git 冲突协作 请说明个人贡献和验证方法",
+          "expected_marker": "分支冲突沟通记录",
+          "hit_at_1": true,
+          "hit_at_3": true
+        }
+      ]
+    },
+    {
+      "strategy": "vector",
+      "cases": 12,
+      "hit_at_1": 1.0,
+      "hit_at_3": 1.0,
+      "total_ms": 6.02,
+      "details": [
+        {
+          "query": "MySQL 重复报名",
+          "expected_marker": "并发报名唯一约束方案",
+          "hit_at_1": true,
+          "hit_at_3": true
+        },
+        {
+          "query": "MySQL 重复报名 请说明个人贡献和验证方法",
+          "expected_marker": "并发报名唯一约束方案",
+          "hit_at_1": true,
+          "hit_at_3": true
+        },
+        {
+          "query": "Redis 缓存过期",
+          "expected_marker": "热点数据过期策略",
+          "hit_at_1": true,
+          "hit_at_3": true
+        },
+        {
+          "query": "Redis 缓存过期 请说明个人贡献和验证方法",
+          "expected_marker": "热点数据过期策略",
+          "hit_at_1": true,
+          "hit_at_3": true
+        },
+        {
+          "query": "Python 采集日志",
+          "expected_marker": "故障日志采集流程",
+          "hit_at_1": true,
+          "hit_at_3": true
+        },
+        {
+          "query": "Python 采集日志 请说明个人贡献和验证方法",
+          "expected_marker": "故障日志采集流程",
+          "hit_at_1": true,
+          "hit_at_3": true
+        },
+        {
+          "query": "Flask 参数校验",
+          "expected_marker": "注册接口校验清单",
+          "hit_at_1": true,
+          "hit_at_3": true
+        },
+        {
+          "query": "Flask 参数校验 请说明个人贡献和验证方法",
+          "expected_marker": "注册接口校验清单",
+          "hit_at_1": true,
+          "hit_at_3": true
+        },
+        {
+          "query": "React 列表渲染",
+          "expected_marker": "列表键值复用检查",
+          "hit_at_1": true,
+          "hit_at_3": true
+        },
+        {
+          "query": "React 列表渲染 请说明个人贡献和验证方法",
+          "expected_marker": "列表键值复用检查",
+          "hit_at_1": true,
+          "hit_at_3": true
+        },
+        {
+          "query": "Git 冲突协作",
+          "expected_marker": "分支冲突沟通记录",
+          "hit_at_1": true,
+          "hit_at_3": true
+        },
+        {
+          "query": "Git 冲突协作 请说明个人贡献和验证方法",
+          "expected_marker": "分支冲突沟通记录",
+          "hit_at_1": true,
+          "hit_at_3": true
+        }
+      ]
+    },
+    {
+      "strategy": "hybrid",
+      "cases": 12,
+      "hit_at_1": 1.0,
+      "hit_at_3": 1.0,
+      "total_ms": 5.8,
+      "details": [
+        {
+          "query": "MySQL 重复报名",
+          "expected_marker": "并发报名唯一约束方案",
+          "hit_at_1": true,
+          "hit_at_3": true
+        },
+        {
+          "query": "MySQL 重复报名 请说明个人贡献和验证方法",
+          "expected_marker": "并发报名唯一约束方案",
+          "hit_at_1": true,
+          "hit_at_3": true
+        },
+        {
+          "query": "Redis 缓存过期",
+          "expected_marker": "热点数据过期策略",
+          "hit_at_1": true,
+          "hit_at_3": true
+        },
+        {
+          "query": "Redis 缓存过期 请说明个人贡献和验证方法",
+          "expected_marker": "热点数据过期策略",
+          "hit_at_1": true,
+          "hit_at_3": true
+        },
+        {
+          "query": "Python 采集日志",
+          "expected_marker": "故障日志采集流程",
+          "hit_at_1": true,
+          "hit_at_3": true
+        },
+        {
+          "query": "Python 采集日志 请说明个人贡献和验证方法",
+          "expected_marker": "故障日志采集流程",
+          "hit_at_1": true,
+          "hit_at_3": true
+        },
+        {
+          "query": "Flask 参数校验",
+          "expected_marker": "注册接口校验清单",
+          "hit_at_1": true,
+          "hit_at_3": true
+        },
+        {
+          "query": "Flask 参数校验 请说明个人贡献和验证方法",
+          "expected_marker": "注册接口校验清单",
+          "hit_at_1": true,
+          "hit_at_3": true
+        },
+        {
+          "query": "React 列表渲染",
+          "expected_marker": "列表键值复用检查",
+          "hit_at_1": true,
+          "hit_at_3": true
+        },
+        {
+          "query": "React 列表渲染 请说明个人贡献和验证方法",
+          "expected_marker": "列表键值复用检查",
+          "hit_at_1": true,
+          "hit_at_3": true
+        },
+        {
+          "query": "Git 冲突协作",
+          "expected_marker": "分支冲突沟通记录",
+          "hit_at_1": true,
+          "hit_at_3": true
+        },
+        {
+          "query": "Git 冲突协作 请说明个人贡献和验证方法",
+          "expected_marker": "分支冲突沟通记录",
+          "hit_at_1": true,
+          "hit_at_3": true
+        }
+      ]
+    }
+  ]
+}

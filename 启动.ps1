@@ -9,7 +9,7 @@ $studioPort = 8765
 $studioUrl = "http://127.0.0.1:$studioPort"
 try {
     $studioHealth = Invoke-RestMethod "$studioUrl/api/health" -TimeoutSec 2
-    if ($studioHealth.version -eq '1.0.0' -and $studioHealth.app -eq 'interview-studio') {
+    if ($studioHealth.app -eq 'interview-studio') {
         Start-Process $studioUrl
         exit 0
     }

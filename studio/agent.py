@@ -39,6 +39,8 @@ def run_coach(config,task,payload,context,max_tokens=2200):
             messages.append({'role':'assistant','content':message.get('content'),'tool_calls':calls})
             for call in calls:
                 runtime.checkpoint()
+                if not isinstance(call,dict) or not isinstance(call.get('id'),str) or not isinstance(call.get('function'),dict):
+                    raise ModelError('工具调用结构无效')
                 name=(call.get('function') or {}).get('name')
                 try:
                     arguments=json.loads(call['function']['arguments'])

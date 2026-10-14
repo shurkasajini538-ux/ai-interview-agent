@@ -12,6 +12,8 @@ with tempfile.TemporaryDirectory(prefix='interview-browser-test-') as temporary:
     directory = Path(temporary)
     shutil.copytree(root/'web', directory/'web')
     shutil.copytree(root/'samples', directory/'samples')
+    if (root/'frontend'/'dist').exists():
+        shutil.copytree(root/'frontend'/'dist',directory/'frontend'/'dist')
     server = ThreadingHTTPServer(('127.0.0.1', 8766), handler_factory(Studio(directory)))
     try:
         server.serve_forever()

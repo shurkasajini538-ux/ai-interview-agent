@@ -1,73 +1,104 @@
 # 面试工坊 · Interview Studio
 
-面向学生求职与保研的本地面试练习应用。将简历解析、个性化题目、逐题追问、评分依据和练习历史放在一个可持续使用的流程中。
+面向本科生求职与保研的 AI 面试练习 Web 应用。导入简历、生成个性化题目、逐题追问、评分取证、事实整理、重练与导出形成闭环。
 
-## 马上使用
+**2.0.0 参赛候选版**。队伍：AAAI简历模拟训练；重庆邮电大学，A组；成员宋佳钊，计算机科学与技术本科。指导老师待本人确认，团队信息正式提交前复核。推荐方向：AI教育与学习平台。
 
-本机运行环境已安装。双击 **启动面试工坊.cmd**，浏览器会打开 http://127.0.0.1:8765。
+![练习总览](verification/01-dashboard.png)
 
-1. 在「简历档案」导入自己的简历，或先使用示例简历。
-2. 点击「查看 / 编辑」核对解析结果，尤其是 OCR 识别的数字、姓名和多栏内容。
-3. 在「开始练习」选择简历、目标岗位、题数，可补充岗位要求。
-4. 逐题回答，再回答一次追问；不清楚的事实可以留待补充。
-5. 查看四项评分、原文证据和 STAR 整理，需要时重答本题。
-6. 完成后查看报告，导出 Markdown / JSON，或打印保存 PDF。
+## 快速运行（Windows）
 
-浏览器可以关闭后再打开，后台服务保持运行。「停止面试工坊.cmd」用于关闭本应用后台。
+安装 Python 3.12、Node.js 24 LTS 和 Git：
 
-## 已实现的能力
+```powershell
+git clone --branch codex/competition-upgrade https://github.com/shurkasajini538-ux/ai-interview-agent.git
+cd ai-interview-agent
+```
 
-- DOCX 正文和表格、文本 PDF、扫描 PDF、PNG/JPG/WEBP/BMP 图片、UTF-8/GB18030 文本与 Markdown。
-- 图片和扫描 PDF 使用本地 OCR，无需上传至 OCR 服务；批量一次最多 5 份。
-- 可修改简历全文；已开始的练习固定使用当时的简历快照。
-- 固定题目列表；回答 → 针对性追问 → 补充回答 → 评分 → 重答 / 下一题。
-- 四项分数均在 0–25 内，总分始终等于分项之和。
-- 在线模型返回结构化结果；异常时明确提示并使用离线规则。
-- STAR 只重新组织回答中的原文事实，未知内容保留待补充标记。
-- SQLite 持久化；同一浏览器空间的历史用于下一轮薄弱点提示。
-- 简历库技能与学历统计直接来自已导入内容，不使用固定演示 Excel。
-- 练习报告导出、历史作答保留、浏览器草稿恢复和重复提交保护。
-- 本机服务，仅绑定 127.0.0.1；模型密钥在 Windows 当前账户下加密保存。
+双击 **安装依赖.cmd** 安装锁定依赖并构建 React 前端，再双击 **启动面试工坊.cmd**，访问 http://127.0.0.1:8765 。无需 Key 即可离线练习。**停止面试工坊.cmd** 关闭本应用；升级已运行版本时先停止再启动。
 
-## 模型设置
+手工安装与运行：
 
-已尝试迁移原项目 `ai-interview-agent/.env` 中的模型配置。密钥不写进前端或文档，不修改原项目。
+```powershell
+py -3.12 -m venv .venv
+.venv/Scripts/python.exe -m pip install -r requirements.lock.txt
+npm.cmd --prefix frontend ci
+npm.cmd --prefix frontend run build
+.venv/Scripts/python.exe app.py --open
+```
 
-在「模型设置」中可配置 OpenAI 兼容的 API 基础地址、模型名称与 API Key。点击「保存并测试连接」核对。留空 API Key 会保留已保存的密钥。
+首次安装需要网络；构建后离线练习无需联网。Node 只用于构建或开发，运行由 Python 提供静态文件与 API。前端开发：先启动后端，再运行 `npm.cmd --prefix frontend run dev`。
 
-在线模式会将本次相关简历内容、岗位描述和回答发送至所配置的模型服务；默认隐藏邮箱、手机号和身份证号。离线模式不调用模型服务。评分均为练习参考，不是录用结论。
+## 使用流程与能力
 
-## 文件与环境
+1. 在「简历档案」导入 DOCX、PDF、图片、TXT 或 Markdown，核对并修改解析结果。
+2. 选择简历、目标岗位、题数和岗位描述，生成固定题目。
+3. 回答与追问后查看四项评分、原文证据、STAR 整理，可重答并保留旧尝试。
+4. 完成后导出 Markdown / JSON，或打印保存 PDF；历史弱项用于下一轮训练。
 
-| 路径 | 用途 |
+图片和扫描 PDF 在本机 OCR；批量最多5份、单文件12MB、PDF最多30页且扫描页最多6页。旧 `.doc` 请转 `.docx`。Word 内嵌图片应单独导入，复杂双栏与数字须人工核对。
+
+## AI 实现
+
+- 真实 Function Calling：两轮决策、最多四次工具调用，支持 search_resume、read_weak_points、record_fact_gap，参数校验后执行并显示记录。
+- 来源分块与检索：1536维哈希 TF-IDF 稀疏向量 + 关键词检索，以 RRF 融合。保留来源 ID 和字符位置；它不是神经语义向量。
+- 事实校验：四项各0–25分，总分由服务端求和；证据检查原文，STAR只接受回答的连续原文片段，未知事实标记待补。
+- 后台任务与 SSE：显示阶段、工具事件及生成文字；验证后落盘；协作式取消防止取消后写入，不能保证立即中止已发送的供应商请求或撤回费用。
+- SQLite、固定快照、请求去重、重答历史与草稿恢复。未完成任务事件在服务重启后失效，已保存练习可继续。
+
+## 模型配置
+
+在「模型设置」填写兼容 Chat Completions 的接口地址、模型和 Key。模型需支持 tools 和 SSE 才启用对应选项，不支持时可关闭。在线模式向所选服务发送相关简历、岗位和回答，默认遮盖常见联系方式；失败时明确标注离线回退。不同引擎的分数不能直接比较。
+
+复制 `.env.example` 为 `.env`：**进程环境变量 > .env > 界面保存配置 > 默认值**。
+
+| 变量 | 作用 |
 |---|---|
-| `app.py` | 本机 HTTP 服务和面试流程 API |
-| `studio/resumes.py` | 多格式解析、本地 OCR、简历结构与证据检索 |
-| `studio/interview.py` | 固定题目、追问、评分校验、STAR 与报告 |
-| `studio/models.py` | 模型适配与 Windows 密钥加密 |
-| `studio/storage.py` | SQLite 记录、浏览器空间隔离与历史记忆 |
-| `web/` | 本地前端，无远程 CDN |
-| `data/` | 运行后生成的数据库、加密模型配置和日志 |
-| `samples/` | 明确标注为模拟数据的示例 |
-| `tests/` | 流程、数据可靠性和接口测试 |
-| `docs/` | 产品说明、技术设计、来源与验收结果 |
+| LLM_MODE | local / online，示例默认 local |
+| LLM_API_KEY | 仅服务端读取，环境 Key 不复制到保存配置 |
+| LLM_BASE_URL / LLM_MODEL | 接口基础地址与模型名 |
+| LLM_REDACT_CONTACTS | 默认 true，遮盖常见联系方式 |
+| STUDIO_AGENT_ENABLED | 默认 true，受控工具决策 |
+| STUDIO_STREAM_ENABLED | 默认 true，模型流式输出 |
 
-当前使用 Python 3.12。迁移到其他电脑时安装 Python 3.12，再运行「安装依赖.cmd」；Windows 加密密钥不能直接跨账户迁移，请重新填写。备份记录时先停止应用，再备份整个 `data/` 目录。
+Windows 保存的 Key 使用当前账户 DPAPI，跨账户需重新填写；非 Windows 是权限受限文件内的 Base64 编码，并非加密，建议使用进程环境变量。运行数据在 data/，备份前停止服务；密钥及用户数据不入库。
 
-## 使用边界
+## 架构与目录
 
-这是供本机个人使用的成品版本，不提供互联网账号登录、多人团队权限或云端部署。不同浏览器空间分别保存练习，清除 Cookie 后需要恢复原浏览器配置才能重新访问旧空间。
+React / TypeScript / Zustand → 本机 API 与后台任务 → 解析和 OCR → 证据索引与受控工具 → 模型 → 结果校验 → SQLite → 报告。
 
-每份文件最大 12 MB，PDF 最多 30 页，其中扫描页最多 6 页。旧版 `.doc` 请转成 `.docx`。Word 内嵌图片需单独导入；复杂双栏简历请人工核对 OCR 顺序。离线规则不能完整判断技术结论的正确性。
+| 路径 | 职责 |
+|---|---|
+| frontend/ | 六个懒加载页面、组件、类型和状态 |
+| app.py | 本机 API、静态文件和流程入口 |
+| studio/agent.py / knowledge.py | 受控工具与证据索引 |
+| studio/models.py / runtime.py / jobs.py | 模型传输、用量、取消和事件 |
+| studio/interview.py / storage.py | 面试校验、持久化与隔离 |
+| studio/resumes.py | 文档解析和本地 OCR |
+| tests/ / verification/ | 自制样本、自动测试与实测记录 |
+| docs/ / tools/ | 技术材料、计划与可复现实验 |
+| web/ | 未构建时的旧版兼容入口，参赛请构建新版 |
 
-未把原演示项目中的 openJiuwen 导入标签当作实际框架集成，本版使用明确、可验证的 Python 状态流程。没有随机工作年限、薪资预测或虚构成绩。
+## 验证
 
-## 运行测试
+31项后端测试、14组浏览器验收通过，覆盖导入、完整六题、刷新、重答、导出、390px布局和浏览器空间隔离。真实模型记录见 verification/live-model-v2-results.json：出题和评分各调用3次工具，共8次模型请求、7018输入Token、2213输出Token、约35.3秒；仅为一轮工程验证。
+
+12条自制查询中，旧字符匹配、关键词、稀疏向量及融合检索的 Hit@1 / Hit@3 均100%。小样本未显示方法差异，不能宣称提升；暂无真实教学效果研究。
 
 ```powershell
 .venv/Scripts/python.exe -m unittest discover -s tests -v
+.venv/Scripts/python.exe tools/evaluate_retrieval.py
+npm.cmd --prefix frontend run build
+# 独立终端启动隔离验收服务：
+.venv/Scripts/python.exe tests/run_browser_server.py
+# 另一个终端运行浏览器验收（Windows使用Edge）：
+node tests/browser_acceptance.cjs
 ```
 
-## 来源
+## 边界与来源
 
-延续用户已有的 AI 面试陪练项目，并借鉴 [WhiteNight123/parser-resume](https://github.com/WhiteNight123/parser-resume) 的多格式入口、结构化展示与项目材料组织。新应用的解析、状态流程、评分、存储和界面均重新实现；对方项目的模型、凭证、简历数据和原代码未并入成品。详见 `docs/来源与取舍.md`。
+面向本机个人使用，默认仅绑定127.0.0.1。Cookie空间隔离不等于公网身份认证，不能直接暴露到互联网。评分用于练习参考；清除Cookie会失去原空间入口。运行数据和证据索引保留本地，暂不提供账户级一键清除界面。
+
+延续本仓库原面试项目，借鉴 [WhiteNight123/parser-resume](https://github.com/WhiteNight123/parser-resume) 的多格式入口、结构展示与材料组织，其代码、权重、私人简历和凭证未并入产品。见 docs/来源与取舍.md 与 docs/依赖与来源.md。开发使用AI辅助，参赛成员仍须理解并对内容负责。
+
+参赛计划见 docs/参赛成品工作计划.md。正式提交由本人核实队伍、指导老师、报名审核、截止时间与最终材料。

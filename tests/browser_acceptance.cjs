@@ -1,14 +1,13 @@
 const path=require('node:path');
 const fs=require('node:fs');
 const assert=require('node:assert/strict');
-const bundle=path.join(process.env.USERPROFILE,'.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules');
-const {chromium}=require(path.join(bundle,'playwright'));
+const {chromium}=require('../frontend/node_modules/playwright');
 const root=path.resolve(__dirname,'..'),out=path.join(root,'verification');
 const checks=[],errors=[];
 let browser;
 const answer='在校园设备监测项目中，我负责 Python 采集接口与异常日志。首先检查采集结果，因为可能出现重复写入，所以增加唯一标识。最终通过12个测试用例对照日志验证功能，确认重复记录不会再次出现。';
 (async()=>{
- browser=await chromium.launch({channel:'msedge',headless:true});
+ browser=await chromium.launch({...(process.platform==='win32'?{channel:'msedge'}:{}),headless:true});
  const context=await browser.newContext({baseURL:'http://127.0.0.1:8766',viewport:{width:1440,height:1024},locale:'zh-CN'});
  const page=await context.newPage();
  page.on('pageerror',e=>errors.push(e.message));
