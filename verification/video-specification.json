@@ -1,0 +1,11 @@
+{
+  "width": 1920,
+  "height": 1080,
+  "duration_seconds": 390.0,
+  "video_codec": "h264",
+  "audio_codec": "aac",
+  "synthetic_narration": true,
+  "synthetic_data": true,
+  "demo_mode": "offline",
+  "subtitle_timing": "按句长近似对齐合成旁白，正式提交前人工试听复核"
+}
