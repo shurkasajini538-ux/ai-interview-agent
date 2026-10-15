@@ -1,0 +1,11 @@
+{
+  "version": "2.0.1",
+  "resolution": "1920x1080",
+  "seconds": 390,
+  "video_codec": "h264",
+  "audio_codec": "aac",
+  "full_decode_passed": true,
+  "chapter_frames": 8,
+  "narration": "Windows系统合成普通话，按章节保留完整旁白，字幕按句长近似对齐；仍需本人完整试听",
+  "data": "自制模拟数据，离线模式实际页面操作"
+}

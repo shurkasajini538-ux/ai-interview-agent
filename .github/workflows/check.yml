@@ -1,0 +1,43 @@
+name: application checks
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: python -m pip install -r requirements.lock.txt
+      - run: npm ci
+        working-directory: frontend
+      - run: npm run build
+        working-directory: frontend
+      - run: python -m unittest discover -s tests -v
+      - run: python tools/evaluate_retrieval.py
+      - name: Browser acceptance
+        shell: pwsh
+        run: |
+          $server = Start-Process python -ArgumentList 'tests/run_browser_server.py' -WindowStyle Hidden -PassThru
+          try {
+            $ready = $false
+            for ($attempt=0; $attempt -lt 60; $attempt++) {
+              try { Invoke-RestMethod http://127.0.0.1:8766/api/health | Out-Null; $ready=$true; break } catch { Start-Sleep -Seconds 1 }
+            }
+            if (-not $ready) { throw 'Browser test service did not start' }
+            node tests/browser_acceptance.cjs
+            if ($LASTEXITCODE -ne 0) { throw 'Browser acceptance failed' }
+          } finally { Stop-Process -Id $server.Id -ErrorAction SilentlyContinue }
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: acceptance-evidence
+          path: verification/

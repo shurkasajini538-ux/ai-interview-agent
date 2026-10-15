@@ -1,0 +1,10 @@
+{
+  "image_ocr": "passed",
+  "scanned_pdf_ocr": "passed",
+  "image_text": "模拟简历·OCR验收样本\n姓名：测试同学\n教育背景：示例大学计算机科学与技术本科\n项目经历：校园图书借阅平台\n使用Python、Flask、MySQL实现后端接口。\n我负责数据表设计、异常处理与接口测试。\n通过12个测试用例验证重复借阅与参数校验\n技能：Python、MySQL、Git、Linux",
+  "pdf_text": "模拟简历·OCR验收样本\n姓名：测试同学\n教育背景：示例大学计算机科学与技术本科\n项目经历：校园图书借阅平台\n使用Python、Flask、MySQL实现后端接口。\n我负责数据表设计、异常处理与接口测试。\n通过12个测试用例验证重复借阅与参数校验。\n技能：Python、MySQL、Git、Linux",
+  "warnings": [
+    "已在本机进行 OCR，请核对文字和数字，特别是多栏排版。",
+    "已对 1 页进行本地 OCR，请核对姓名、日期和数字。"
+  ]
+}

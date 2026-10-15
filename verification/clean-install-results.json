@@ -1,0 +1,13 @@
+{
+  "date": "2026-10-14",
+  "source_commit": "359623b",
+  "environment": "Windows, Python 3.12, Node 24; new venv and new npm install in separate clone",
+  "installer": "安装依赖.ps1",
+  "frontend_built": true,
+  "backend_tests_passed": 31,
+  "browser_checks_passed": 14,
+  "browser_console_errors": 0,
+  "model_config_copied": false,
+  "mode": "local",
+  "limitations": "Same Windows host; not a second physical computer. Independent Windows GitHub Actions also passed."
+}

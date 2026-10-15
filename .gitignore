@@ -1,8 +1,13 @@
+.venv/
+data/
+.env
 __pycache__/
 *.pyc
-output/memory.json
-output/_tmp_resume.md
-.env
-.venv/
-# Word 临时锁定文件
-~$*
+verification/private/
+frontend/node_modules/
+frontend/dist/
+release/
+.env.*
+!.env.example
+tmp/
+提交材料/

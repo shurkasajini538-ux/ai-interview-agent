@@ -1,0 +1,28 @@
+{
+  "date": "2026-10-13T18:19:44+08:00",
+  "model": "deepseek-chat",
+  "mode": "online",
+  "question_engine": "online",
+  "question_count": 6,
+  "question_notice": "",
+  "generation_tool_calls": 3,
+  "followup_engine": "online",
+  "followup_notice": "",
+  "evaluation_engine": "online",
+  "evaluation_notice": "AI 辅助评价，供练习参考。STAR 整理仅使用你的回答原文，缺失事实保留待补充标记。",
+  "total": 32,
+  "total_is_sum": true,
+  "no_invented_numeric_claims": true,
+  "evidence_valid": true,
+  "passed": true,
+  "evaluation_tool_calls": 3,
+  "followup_tool_calls": 0,
+  "metrics": {
+    "requests": 8,
+    "prompt_tokens": 7018,
+    "completion_tokens": 2213,
+    "usage_available": true,
+    "elapsed_ms": 35344
+  },
+  "stream_events": 24
+}
