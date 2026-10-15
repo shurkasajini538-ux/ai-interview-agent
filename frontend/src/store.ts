@@ -1,5 +1,6 @@
 import { create } from "zustand";
-import { api, requestId, watchJob } from "./api";
+import { api, ApiError, requestId, watchJob } from "./api";
+import { pendingJob, savePendingJob, clearPendingJob } from "./pending";
 import type { Bootstrap, Job, JobEvent } from "./types";
 interface State {
   data: Bootstrap | null;
@@ -13,7 +14,6 @@ interface State {
   cancel: () => Promise<void>;
   recover: () => Promise<unknown>;
 }
-const pendingKey = "studio:pending-job";
 function awaitJob(
   id: string,
   set: (state: Partial<State>) => void,
@@ -23,7 +23,7 @@ function awaitJob(
       id,
       (e) => set({ events: [...useStudio.getState().events.slice(-30), e] }),
       (job) => {
-        localStorage.removeItem(pendingKey);
+        clearPendingJob();
         set({ busy: false, job });
         if (job.state === "done") resolve(job.result);
         else reject(new Error(job.error || "操作已取消。"));
@@ -60,7 +60,7 @@ export const useStudio = create<State>((set, get) => ({
         request_id: requestId(),
       });
       set({ job });
-      localStorage.setItem(pendingKey, job.id);
+      savePendingJob(job.id);
       const result = await awaitJob(job.id, set);
       await get().refresh();
       return result as T;
@@ -79,7 +79,7 @@ export const useStudio = create<State>((set, get) => ({
     }
   },
   recover: async () => {
-    const id = localStorage.getItem(pendingKey);
+    const id = pendingJob();
     if (!id) return null;
     try {
       const job = await api<Job>("/api/jobs/" + id);
@@ -89,12 +89,12 @@ export const useStudio = create<State>((set, get) => ({
         busy: !["done", "failed", "cancelled"].includes(job.state),
       });
       if (job.state === "done") {
-        localStorage.removeItem(pendingKey);
+        clearPendingJob();
         await get().refresh();
         return job.result;
       }
       if (["failed", "cancelled"].includes(job.state)) {
-        localStorage.removeItem(pendingKey);
+        clearPendingJob();
         set({ error: job.error });
         return null;
       }
@@ -102,7 +102,8 @@ export const useStudio = create<State>((set, get) => ({
       await get().refresh();
       return result;
     } catch (e) {
-      localStorage.removeItem(pendingKey);
+      // Preserve the recovery handle on a transient network failure.
+      if (e instanceof ApiError && e.status === 404) clearPendingJob();
       set({ busy: false, error: (e as Error).message });
       return null;
     }

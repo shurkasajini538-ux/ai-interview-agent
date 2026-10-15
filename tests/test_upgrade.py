@@ -1,5 +1,8 @@
 import json
 import os
+import sqlite3
+from concurrent.futures import ThreadPoolExecutor
+from contextlib import closing
 import tempfile
 import threading
 import time
@@ -32,8 +35,52 @@ class KnowledgeTests(unittest.TestCase):
     def test_limits_and_no_overlap_claim_when_unmatched(self):
         index=EvidenceIndex(TEXT)
         self.assertLessEqual(len(index.search('无关xyz',99)),5)
-        self.assertTrue(all(not r['matched'] for r in index.search('zzzzunrelated')))
+        self.assertEqual(index.search('zzzzunrelated'), [])
         self.assertTrue(all(r['text'] for r in chunks(TEXT)))
+
+    def test_unmatched_queries_and_hash_collisions_are_not_evidence(self):
+        with patch('studio.knowledge.DIMENSIONS', 1):
+            index = EvidenceIndex('MySQL Redis')
+            for strategy in ('keyword', 'vector', 'hybrid'):
+                self.assertEqual(index.search('unrelated', strategy=strategy), [])
+                self.assertEqual(index.search('   !!!', strategy=strategy), [])
+                self.assertTrue(index.search('MySQL', strategy=strategy))
+        self.assertTrue(EvidenceIndex('使用 C 和 R 完成实验。').search('R'))
+
+    def test_cache_hit_avoids_recomputing_vectors(self):
+        with tempfile.TemporaryDirectory() as root:
+            path = Path(root)/'index.sqlite3'
+            original = EvidenceIndex(TEXT, path)
+            with patch('studio.knowledge.hashed_vector', side_effect=AssertionError('recomputed')):
+                cached = EvidenceIndex(TEXT, path)
+            self.assertEqual(original.vectors, cached.vectors)
+
+    def test_invalid_cached_payload_rebuilt_and_bad_database_usable(self):
+        with tempfile.TemporaryDirectory() as root:
+            path = Path(root)/'index.sqlite3'
+            original = EvidenceIndex(TEXT, path)
+            with closing(sqlite3.connect(path)) as db, db:
+                db.execute('UPDATE indexes SET payload=?', ('not json',))
+            repaired = EvidenceIndex(TEXT, path)
+            self.assertEqual(original.search('MySQL'), repaired.search('MySQL'))
+            with patch('studio.knowledge.hashed_vector', side_effect=AssertionError('not repaired')):
+                EvidenceIndex(TEXT, path)
+            broken = Path(root)/'broken.sqlite3'
+            broken.write_bytes(b'broken database')
+            self.assertEqual(original.search('MySQL'), EvidenceIndex(TEXT, broken).search('MySQL'))
+
+    def test_concurrent_first_cache_writes_succeed(self):
+        with tempfile.TemporaryDirectory() as root:
+            path = Path(root)/'index.sqlite3'
+            barrier = threading.Barrier(6)
+            def miss(index, path):
+                barrier.wait(timeout=3)
+                return False
+            with patch.object(EvidenceIndex, '_load', miss), ThreadPoolExecutor(max_workers=6) as pool:
+                results = list(pool.map(lambda _: EvidenceIndex(TEXT, path).search('MySQL'), range(6)))
+            self.assertTrue(all(result == results[0] for result in results))
+            with closing(sqlite3.connect(path)) as db, db:
+                self.assertEqual(db.execute('SELECT COUNT(*) FROM indexes').fetchone()[0], 1)
 
 
 class ConfigTests(unittest.TestCase):
@@ -114,6 +161,38 @@ class JobTests(unittest.TestCase):
             op.cancelled.set()
             op.check()
         self.assertTrue(op.committed)
+
+    def test_global_capacity_rejects_other_owners_and_recovers(self):
+        jobs = Jobs(max_active=2, max_records=4)
+        release = threading.Event()
+        try:
+            first = jobs.create('one', 'a', {}, lambda: release.wait(3))
+            second = jobs.create('two', 'b', {}, lambda: release.wait(3))
+            with self.assertRaises(BlockingIOError):
+                jobs.create('three', 'c', {}, lambda: None)
+            self.assertEqual(jobs.create('one', 'a', {}, lambda: None)['id'], first['id'])
+        finally:
+            release.set()
+        self.wait(jobs, first['id'], 'one')
+        self.wait(jobs, second['id'], 'two')
+        third = jobs.create('three', 'c', {}, lambda: 'finished')
+        self.assertEqual(self.wait(jobs, third['id'], 'three')['result'], 'finished')
+
+    def test_finished_records_bounded_and_committed_job_not_cancelled(self):
+        jobs = Jobs(max_active=1, max_records=3)
+        for i in range(8):
+            job = jobs.create('owner', str(i), {}, lambda: commit(lambda: 42))
+            self.assertEqual(self.wait(jobs, job['id'], 'owner')['result'], 42)
+            self.assertFalse(jobs.cancel(job['id'], 'owner')['cancel_accepted'])
+            self.assertLessEqual(len(jobs.jobs), 3)
+
+    def test_worker_start_failure_releases_capacity(self):
+        jobs = Jobs(max_active=1)
+        with patch('studio.jobs.threading.Thread.start', side_effect=RuntimeError('no thread')):
+            failed = jobs.create('owner', 'failed', {}, lambda: None)
+        self.assertEqual(failed['state'], 'failed')
+        next_job = jobs.create('owner', 'next', {}, lambda: 42)
+        self.assertEqual(self.wait(jobs, next_job['id'], 'owner')['result'], 42)
 
 
 if __name__=='__main__':unittest.main()

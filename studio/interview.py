@@ -14,7 +14,7 @@ DIMENSIONS = [('structure', '回答完整性'), ('depth', '内容深度'),
 def model_context(config, resume, **extra):
     query=' '.join(str(extra.get(k,'')) for k in ('role','job_description','question','answer'))[:4000]
     records=EvidenceIndex(resume['text'],config.get('_index_path')).search(query or '项目 技能 个人贡献',3)
-    runtime.emit('stage',label='已检索简历证据')
+    runtime.emit('stage',label='已检索简历证据' if records else '未找到匹配证据，将参考简历摘要；请核对生成内容')
     summary={k:resume['parsed'].get(k) for k in ('education','skills','projects')}
     summary['projects']=[{'title':p['title']} for p in resume['parsed'].get('projects',[])]
     if config.get('redact_contacts', True):

@@ -1,4 +1,5 @@
 """Serve an isolated temporary workspace for browser acceptance tests."""
+import os
 import shutil
 import sys
 import tempfile
@@ -14,7 +15,7 @@ with tempfile.TemporaryDirectory(prefix='interview-browser-test-') as temporary:
     shutil.copytree(root/'samples', directory/'samples')
     if (root/'frontend'/'dist').exists():
         shutil.copytree(root/'frontend'/'dist',directory/'frontend'/'dist')
-    server = ThreadingHTTPServer(('127.0.0.1', 8766), handler_factory(Studio(directory)))
+    server = ThreadingHTTPServer(('127.0.0.1', int(os.environ.get('STUDIO_TEST_PORT', '8766'))), handler_factory(Studio(directory)))
     try:
         server.serve_forever()
     except KeyboardInterrupt:

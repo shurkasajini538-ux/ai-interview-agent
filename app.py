@@ -235,7 +235,7 @@ def handler_factory(studio):
                     file = studio.root / 'web' / path.rsplit('/', 1)[-1]
                     return self.send(file.read_bytes(), content_type=mimetypes.guess_type(file)[0] or 'application/octet-stream')
                 if path == '/api/health':
-                    return self.send({'ok': True, 'version': '2.0.0', 'app': 'interview-studio'})
+                    return self.send({'ok': True, 'version': '2.0.1', 'app': 'interview-studio'})
                 if not owner:
                     return self.send({'error': '请从首页打开应用。'}, 401)
                 if path == '/api/bootstrap':

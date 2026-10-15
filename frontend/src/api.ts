@@ -1,4 +1,13 @@
 import type { Job, JobEvent } from "./types";
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    public readonly status: number,
+  ) {
+    super(message);
+    this.name = "ApiError";
+  }
+}
 export async function api<T>(path: string, body?: unknown): Promise<T> {
   const response = await fetch(
     path,
@@ -14,7 +23,8 @@ export async function api<T>(path: string, body?: unknown): Promise<T> {
         },
   );
   const data = await response.json();
-  if (!response.ok) throw new Error(data.error || "请求失败，请重试。");
+  if (!response.ok)
+    throw new ApiError(data.error || "请求失败，请重试。", response.status);
   return data as T;
 }
 export const requestId = () => crypto.randomUUID();
@@ -31,6 +41,9 @@ export function watchJob(
     onFinal(JSON.parse((e as MessageEvent).data));
   });
   let failures = 0;
+  stream.onopen = () => {
+    failures = 0;
+  };
   stream.onerror = () => {
     if (++failures > 4) {
       stream.close();
