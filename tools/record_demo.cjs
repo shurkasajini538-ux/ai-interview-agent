@@ -3,7 +3,7 @@ const {chromium}=require('../frontend/node_modules/playwright');
 const fs=require('node:fs'),path=require('node:path');
 const root=path.resolve(__dirname,'..'),out=path.join(root,'tmp/video');
 const timings=JSON.parse(fs.readFileSync(path.join(out,'timing.json'),'utf8'));
-const base='http://127.0.0.1:8766';
+const base='http://127.0.0.1:'+(process.env.STUDIO_TEST_PORT||'8766');
 const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 let browser;
 (async()=>{
@@ -11,7 +11,7 @@ let browser;
  const context=await browser.newContext({viewport:{width:1920,height:1080},recordVideo:{dir:out,size:{width:1920,height:1080}},locale:'zh-CN'});
  const page=await context.newPage();page.setDefaultTimeout(60000);page.on('dialog',dialog=>dialog.accept());
  await page.addInitScript(()=>document.addEventListener('DOMContentLoaded',()=>{
-   const badge=document.createElement('div');badge.textContent='模拟数据 · 离线演示 · 合成普通话旁白';
+   const badge=document.createElement('div');badge.textContent='2.0.1 · 模拟数据 · 离线演示 · 合成普通话旁白';
    badge.style.cssText='position:fixed;bottom:12px;left:16px;z-index:9999;background:#123d31;color:white;padding:8px 14px;border-radius:5px;font:16px sans-serif;pointer-events:none';
    document.body.append(badge);
  }));
@@ -58,5 +58,5 @@ let browser;
  await chapter(6,async()=>{await page.getByRole('link',{name:'模型设置',exact:true}).click();await wait(8000);await page.evaluate(()=>window.scrollTo(0,350));});
  await chapter(7,async()=>{await page.getByRole('link',{name:'练习总览',exact:true}).click();await page.evaluate(()=>window.scrollTo(0,0));});
  const video=page.video();await context.close();await video.saveAs(path.join(out,'screen.webm'));await browser.close();
- fs.writeFileSync(path.join(out,'recording.json'),JSON.stringify({marks,duration_seconds:timings.reduce((a,b)=>a+b,0),mode:'offline',synthetic_data:true,synthetic_narration:true,session_id:id},null,2));
+ fs.writeFileSync(path.join(out,'recording.json'),JSON.stringify({marks,duration_seconds:timings.reduce((a,b)=>a+b,0),version:'2.0.1',mode:'offline',synthetic_data:true,synthetic_narration:true,session_id:id},null,2));
 })().catch(async error=>{console.error(error);await browser?.close();process.exitCode=1;});

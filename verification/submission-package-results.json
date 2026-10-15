@@ -1,0 +1,16 @@
+{
+  "date": "2026-10-15",
+  "version": "2.0.1",
+  "source_zip_integrity": true,
+  "manifest_hashes": true,
+  "runtime_and_credential_paths_excluded": true,
+  "public_text_secret_pattern_files_scanned": 85,
+  "extracted_source_tests": 38,
+  "health": {
+    "ok": true,
+    "version": "2.0.1",
+    "app": "interview-studio"
+  },
+  "built_frontend_served": true,
+  "environment": "同一Windows主机，解压副本使用已有项目Python虚拟环境；非全新机器安装"
+}

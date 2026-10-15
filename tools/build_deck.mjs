@@ -6,19 +6,19 @@ const runtime=path.join(process.env.USERPROFILE,'.cache/codex-runtimes/codex-pri
 process.env.RUNTIME_NODE_MODULES=path.join(runtime,'node/node_modules');
 const skill=path.join(process.env.USERPROFILE,'.codex/plugins/cache/openai-primary-runtime/presentations/26.1013.11914/skills/presentations');
 const {Presentation,PresentationFile}=await import(pathToFileURL(path.join(runtime,'node/node_modules/@oai/artifact-tool/dist/artifact_tool.mjs')).href);
-const tmp=path.join(root,'tmp/slides');await fs.mkdir(tmp,{recursive:true});await fs.mkdir(path.join(root,'output/slides'),{recursive:true});
+const tmp=path.join(root,'tmp/slides-2.0.1');await fs.mkdir(tmp,{recursive:true});await fs.mkdir(path.join(root,'output/slides'),{recursive:true});
 const p=Presentation.create({slideSize:{width:1280,height:720}});
 const font='Microsoft YaHei';p.theme.defaultFont=font;
 function text(slide,value,x,y,w,h,size=30,color='#183e31',bold=false){const s=slide.shapes.add({geometry:'textbox',position:{left:x,top:y,width:w,height:h},fill:'none',line:{fill:'none',width:0}});s.text=value;s.text.style={typeface:font,fontSize:size,color,bold};return s;}
 function slide(title,notes){const s=p.slides.add();s.background.fill='#f5f6f0';text(s,title,70,60,1140,80,46,'#174b3b',true);s.speakerNotes.text=notes;return s;}
-let s=slide('面试工坊','团队信息依据本人提供的报名截图，指导老师待确认；候选版本2.0.0。');
+let s=slide('面试工坊','团队信息依据本人提供的报名截图，指导老师待确认；提交材料版本2.0.1。');
 text(s,'围绕真实经历，练习可验证的表达',70,240,1050,100,48);
 text(s,'AAAI简历模拟训练 · 重庆邮电大学 · A组',70,470,1100,60,27);
-text(s,'宋佳钊 · 2.0.0 参赛候选版',70,540,1100,60,24,'#53665c');
+text(s,'宋佳钊 · 2.0.1',70,540,1100,60,24,'#53665c');
 s=slide('用户问题与练习流程','来源：docs/综合技术文档.md；为产品定位，不含用户效果研究结论。');
 text(s,'有项目经历，却讲不清个人贡献与验证依据',70,190,1120,80,36);
-text(s,'核对简历 → 明确岗位 → 回答与追问',70,325,1100,70,34);
-text(s,'证据反馈 → 补充事实 → 重答与复盘',70,425,1100,70,34);
+text(s,'核对简历，明确岗位，回答针对性追问',70,325,1100,70,34);
+text(s,'依据原文反馈补充事实，重答后复盘',70,425,1100,70,34);
 text(s,'目标用户：本科生求职与保研；评分用于练习参考',70,595,1110,48,24,'#53665c');
 s=slide('实际运行界面','自制模拟数据的本机浏览器截图。来源：verification/01-dashboard.png。');
 const bytes=await fs.readFile(path.join(root,'tmp/pdfs/01-dashboard-excerpt.png'));
@@ -35,8 +35,8 @@ text(s,'STAR保留回答事实，未知内容标记待补',70,305,1130,65,34);
 text(s,'草稿恢复、请求去重、重答历史与取消',70,415,1130,65,34);
 text(s,'模型建议仍需人工核对；取消不能保证撤销已产生的供应商用量',70,580,1120,70,24,'#53665c');
 s=slide('验证结果与局限','来源：tests/、verification/browser-results.json、live-model-v2-results.json、retrieval-results.json。');
-text(s,'31 项后端测试 + 14 组浏览器验收通过',70,190,1130,80,38);
-text(s,'真实在线验证：出题与评分各调用3次工具\n8次模型请求，7018输入 / 2213输出Token',70,325,1130,125,30);
+text(s,'38 项后端测试 + 16 组浏览器验收通过',70,190,1130,80,38);
+text(s,'历史在线实测（2.0.0）：出题与评分各调用3次工具\n8次模型请求，7018输入 / 2213输出Token',70,325,1130,125,30);
 text(s,'12条自制检索查询：各方法均命中\n小样本未显示提升；真实学生教师试用尚未完成',70,505,1130,130,29,'#53665c');
 s=slide('交付与下一步','来源：README、docs/参赛成品工作计划.md、docs/用户试用方案.md。');
 text(s,'本机可运行代码、技术报告与演示视频',70,200,1130,70,36);
@@ -48,5 +48,5 @@ for(let i=0;i<p.slides.items.length;i++){
 }
 const candidate=path.join(tmp,'candidate.pptx');await(await PresentationFile.exportPptx(p)).save(candidate);
 const {finalizePresentation}=await import(pathToFileURL(path.join(skill,'container_tools/artifact_tool_utils.mjs')).href);
-const result=await finalizePresentation({workspaceDir:root,candidatePath:candidate,finalPath:path.join(root,'output/slides/面试工坊_答辩候选稿.pptx'),pythonExecutable:path.join(runtime,'python/python.exe'),integrityValidatorPath:path.join(skill,'container_tools/inspect_presentation_package_integrity.py'),layoutValidatorPath:path.join(skill,'container_tools/inspect_presentation_layout_geometry.py'),layoutArgs:['--expected-slide-size-emu','12192000,6858000','--validate-heading-fit'],fontPolicy:{basis:'design',families:[font]},verifyArtifactToolImport:true,receiptPath:path.join(tmp,'validation.json')});
+const result=await finalizePresentation({explicitTotalSlideCount:7,workspaceDir:root,candidatePath:candidate,finalPath:path.join(root,'output/slides/面试工坊_答辩演示_2.0.1.pptx'),pythonExecutable:path.join(runtime,'python/python.exe'),integrityValidatorPath:path.join(skill,'container_tools/inspect_presentation_package_integrity.py'),layoutValidatorPath:path.join(skill,'container_tools/inspect_presentation_layout_geometry.py'),layoutArgs:['--expected-slide-size-emu','12192000,6858000','--validate-heading-fit'],fontPolicy:{basis:'design',families:[font]},verifyArtifactToolImport:true,receiptPath:path.join(tmp,'validation.json')});
 console.log(JSON.stringify(result));
